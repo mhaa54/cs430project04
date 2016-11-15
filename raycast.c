@@ -1,7 +1,6 @@
 #include "json.h"
 #include "ppmrw_io.h"
 #include <math.h>
-#include <stdio.h>
 
 // default shinniness factor for specular reflection (used wuieh ns==0)
 #define SHININNESS 20
@@ -14,16 +13,6 @@
 
 // distance to far clipping plane
 #define fcp 200
-
-// max recursion depth
-#define MAX_DEPTH 10
-
-// small number near to 0
-#define THRESHOLD 0.001
-
-// ray offset
-#define OFFSET 0.001
-
 
 // json array
 node scene[MAX_NODES];
@@ -92,26 +81,13 @@ void subtract(double *p, double * q, double *result)
 	result[2] = p[2] - q[2];
 }
 
-// function to calculate the reflected ray
-void reflect(double *In, double *N, double *Out)
+void reflect(double *L, double *N, double *R)
 {
-	double dot = dot_product(N, In);
-	Out[0] = 2.0 * dot * N[0] - In[0];
-	Out[1] = 2.0 * dot * N[1] - In[1];
-	Out[2] = 2.0 * dot * N[2] - In[2];
-	normalize(Out);
-}
-
-// function to calculate the refracted ray
-void refract(double *In, double *N, double snell, double *Out)
-{
-	double dot = dot_product(N, In);
-	double sqr = sqrt(1.0 - snell*snell*(1.0-(dot * dot)));
-	dot = (snell * dot - sqr);
-	Out[0] = dot * N[0] - snell * In[0];
-	Out[1] = dot * N[1] - snell * In[1];
-	Out[2] = dot * N[2] - snell * In[2];
-	normalize(Out);
+	double dot = dot_product(N, N);
+	R[0] = 2 * dot * N[0] - L[0];
+	R[1] = 2 * dot * N[1] - L[1];
+	R[2] = 2 * dot * N[2] - L[2];
+	normalize(R);
 }
 
 void clamp(double *v, double minimum, double maximum)
@@ -284,291 +260,187 @@ void Phong(double *L, double *N, double *R, double *V, double *hitPoint, node *o
 	}
 }
 
-
-void lighting(double *color, double *hit, int index){
-	// now, loop over all lights
-	for (int k = 0; k < nNodes; k++) if (scene[k].type[0] == 'l')	// for each light
-	{
-		// ray origing (fron light to object)
-		double *Ron = scene[k].position;
-
-		// ray direction
-		double Rdn[3];
-		// light position - hit
-		subtract(hit, Ron, Rdn);
-
-		normalize(Rdn);
-
-		// look for the closest ray intersection
-		double objHit[3];
-		int objIndex = index;
-		if (shoot(Ron, Rdn, objHit, &objIndex))
-		{
-			// the object is the closets to the light direction
-			if (objIndex == index)
-			{
-				double resultColor[3] = { 0.0, 0.0, 0.0 };
-				double N[3], L[3], V[3];
-				// acum light
-				if (scene[index].type[0] == 's')	// sphere
-					//N = Ron - scene[index].position 
-					subtract(hit, scene[index].position, N);
-				else if (scene[index].type[0] == 'p')	// plane
-					memcpy(N, scene[index].normal, sizeof(double) * 3);
-				normalize(N);
-
-				// L = light position - hit
-				subtract(scene[k].position, hit, L);
-				normalize(L);
-
-				// computing reflext ray
-				double R[3];
-				reflect(L, N, R);
-
-				// view vector = (0,0,0) - hit 
-				V[0] = -hit[0];
-				V[1] = -hit[1];
-				V[2] = -hit[2];
-				normalize(V);
-
-				// compute light model with L, N, R, Diffuse and Specular
-				Phong(L, N, R, V, hit, &scene[index], &scene[k], resultColor);
-				color[0] += resultColor[0];
-				color[1] += resultColor[1];
-				color[2] += resultColor[2];
-			}
-		}
-	}
-
-	// need to be  sure that every color component is betwqeen 0 and 1 before conversion
-	clamp(color, 0.0, 1.0);
-	
-}
-
-
-void ray_trace(double *colorResult, double *initialPos, double *u, int depth, double intensity, double actualRefractionIndex){
-
-
-	// check intensity and number of recursions
-	if (depth < 0 || intensity < THRESHOLD) return;
-
-	double colorAux[3] = { 0, 0, 0 };
-	
-	// return position of first hit 
-	double hit[3];
-	int index = -1;
-	double inten;
-
-	// check if an object is hit, and in that case, if the hit is between near and far clipping planes
-	if (shoot(initialPos, u, hit, &index) && hit[2] >= zp && hit[2] <= fcp && depth)
-	{
-		// inside clipping planes...
-		// shade intersection point
-		lighting(colorAux, hit, index);
-
-		inten = intensity * (1.0 - scene[index].reflectivity - scene[index].refractivity);
-
-		colorResult[0] = colorAux[0] * inten;
-		colorResult[1] = colorAux[1] * inten;
-		colorResult[2] = colorAux[2] * inten;
-	}
-
-
-	// if there was a hit, reflect ray
-	if (index != -1){
-
-		double N[3];
-		//calculate normal
-		if (scene[index].type[0] == 's')	// sphere
-			//N = Ron - scene[index].position 
-			subtract(hit, scene[index].position, N);
-		else if (scene[index].type[0] == 'p')	// plane
-			memcpy(N, scene[index].normal, sizeof(double) * 3);
-		normalize(N);
-		
-		// obtain -u for correct reflect vector calculation
-		double	center[] = { 0, 0, 0 };
-		double	minusIn[] = { 0, 0, 0 };
-		subtract(center, u, minusIn);
-
-		// reflect vector
-		double r[] = { 0, 0, 0 };
-		reflect(minusIn, N, r);
-
-		// reset aux color
-		colorAux[0] = 0;
-		colorAux[1] = 0;
-		colorAux[2] = 0;
-
-		//little offset displacement in reflect direction
-		double	newhit[] = { hit[0] + r[0] * OFFSET, hit[1] + r[1] * OFFSET, hit[2] + r[2] * OFFSET };
-
-		//recursion
-		ray_trace(colorAux, newhit, r, depth - 1, intensity * scene[index].reflectivity, actualRefractionIndex);
-		
-		// add color to total
-		colorResult[0] += colorAux[0];
-		colorResult[1] += colorAux[1];
-		colorResult[2] += colorAux[2];
-
-		// refract vector
-		double dot = dot_product(N, r);
-		if (dot > 0.0){
-			refract(minusIn, N, scene[index].ior / actualRefractionIndex, r);
-			actualRefractionIndex = 1.0;
-		}
-		else{
-			refract(minusIn, N, actualRefractionIndex / scene[index].ior, r);
-			actualRefractionIndex = scene[index].ior;
-		}
-		
-
-		// reset aux color
-		colorAux[0] = 0;
-		colorAux[1] = 0;
-		colorAux[2] = 0;
-
-		//little offset displacement in refrac direction
-		newhit[0] = hit[0] + r[0] * OFFSET;
-		newhit[1] = hit[1] + r[1] * OFFSET;
-		newhit[2] = hit[2] + r[2] * OFFSET;
-
-		
-		
-
-		// recursion
-		ray_trace(colorAux, newhit, r, depth - 1, intensity * scene[index].refractivity, actualRefractionIndex);
-
-		// add color
-		colorResult[0] += colorAux[0];
-		colorResult[1] += colorAux[1];
-		colorResult[2] += colorAux[2];
-	}
-
-
-	clamp(colorResult, 0.0, 1.0);
-}
-
 // to the ray casting, and save it into filename
 void ray_casting(const char *filename)
 {
-	// do some validations
-	if (nNodes <= 0)
-	{
-		fprintf(stderr, "Empty scene\n");
-		exit(1);
-	}
+  // do some validations
+  if (nNodes <= 0)
+  {
+    fprintf(stderr, "Empty scene\n");
+    exit(1);
+  }
 
-	// look for camera object
-	int found = 0;
-	double w, h;
-	for (int i = 0; i < nNodes; i++)
-	{
-		if (strcmp(scene[i].type, "camera") == 0)
-		{
-			found = 1;
-			w = scene[i].width;
-			h = scene[i].height;
-			if (w <= 0.0 || w > 4096.0 || h< 0.0 || h > 4096.0)
-			{
-				fprintf(stderr, "Invalid camera. Please, check the scene\n");
-				exit(1);
-			}
-		}
-	}
-	if (found == 0)
-	{
-		fprintf(stderr, "Camera object not found. Invalid scene\n");
-		exit(1);
-	}
+  // look for camera object
+  int found = 0;
+  double w, h;
+  for (int i = 0; i < nNodes; i++)
+  {
+    if (strcmp(scene[i].type, "camera") == 0)
+    {
+      found = 1;
+      w = scene[i].width;
+      h = scene[i].height;
+      if (w <= 0.0 || w > 4096.0 || h< 0.0 || h > 4096.0)
+      {
+        fprintf(stderr, "Invalid camera. Please, check the scene\n");
+        exit(1);
+      }
+    }
+  }
+  if (found == 0)
+  {
+    fprintf(stderr, "Camera object not found. Invalid scene\n");
+    exit(1);
+  }
 
 
-	// creating image buffer
-	unsigned char *imageR = NULL, *imageG = NULL, *imageB = NULL;
-	// Dynamically allocate memory to hold image buffers
-	imageR = (unsigned char *)malloc(height * width * sizeof(unsigned char));
-	imageG = (unsigned char *)malloc(height * width * sizeof(unsigned char));
-	imageB = (unsigned char *)malloc(height * width * sizeof(unsigned char));
+  // creating image buffer
+  unsigned char *imageR = NULL, *imageG = NULL, *imageB = NULL;
+  // Dynamically allocate memory to hold image buffers
+  imageR = (unsigned char *)malloc(height * width * sizeof(unsigned char));
+  imageG = (unsigned char *)malloc(height * width * sizeof(unsigned char));
+  imageB = (unsigned char *)malloc(height * width * sizeof(unsigned char));
 
-	// Check validity
-	if (imageR == NULL || imageG == NULL || imageB == NULL)
-	{
-		fprintf(stderr, "Memory allocation failed for the image\n");
-		exit(1);
-	}
+  // Check validity
+  if (imageR == NULL || imageG == NULL || imageB == NULL)
+  {
+    fprintf(stderr, "Memory allocation failed for the image\n");
+    exit(1);
+  }
 
-	// erasing image
-	int s = width * height;
-	memset(imageR, 0, s);
-	memset(imageG, 0, s);
-	memset(imageB, 0, s);
+  // erasing image
+  int s = width * height;
+  memset(imageR, 0, s);
+  memset(imageG, 0, s);
+  memset(imageB, 0, s);
 
-	// the height of one pixel 
-	double pixheight = h / (double)height;
+  // the height of one pixel 
+  double pixheight = h / (double)height;
 
-	// the width of one pixel 
-	double pixwidth = w / (double)width;
+  // the width of one pixel 
+  double pixwidth = w / (double)width;
   
 	double eyePos[3] = { 0.0, 0.0,0.0 };
 
-	// for each row 
-	for(int i = 0; i < height; i++)
-	{ 
-	// y coord of row 
-	double py = -h/2.0 + pixheight * (i + 0.5);
+  // for each row 
+  for(int i = 0; i < height; i++)
+  { 
+    // y coord of row 
+    double py = -h/2.0 + pixheight * (i + 0.5);
 
-	// for each column 
-	for(int j = 0; j < width; j++)
-	{ 
-		// x coord of column 
-		double px = -w/2.0 + pixwidth * (j + 0.5);
+    // for each column 
+    for(int j = 0; j < width; j++)
+    { 
+      // x coord of column 
+      double px = -w/2.0 + pixwidth * (j + 0.5);
 
-		// z coord is on screen 
-		double pz = zp;
+      // z coord is on screen 
+      double pz = zp;
 
-		// length of p vector
-		double norm = sqrt(px*px + py*py + pz*pz);
+      // length of p vector
+      double norm = sqrt(px*px + py*py + pz*pz);
 
-		// unit ray vector 
-		double ur[3] = {px/norm, py/norm, pz/norm};
+      // unit ray vector 
+      double ur[3] = {px/norm, py/norm, pz/norm};
 
-		// returned color
-		double colorIJ[3] = { 0,0,0 };
-		
-		// trace the ray
-		ray_trace(colorIJ, eyePos, ur, MAX_DEPTH, 1.0, 1.0);
+      // return position of first hit 
+      double hit[3];
+      int index;
+			double colorIJ[3] = { 0,0,0 };
 
-		// pixel colored by object hit 
-		int k = (height - 1 - i) * width + j;
-		imageR[k] = (unsigned char)(colorIJ[0] * 255.0);
-		imageG[k] = (unsigned char)(colorIJ[1] * 255.0);
-		imageB[k] = (unsigned char)(colorIJ[2] * 255.0);
-	} 
-}  
+			// check if an object is hit, and in that case, if the hit is between near and far clipping planes
+			if (shoot(eyePos, ur, hit, &index) && hit[2] >= zp && hit[2] <= fcp)
+			{
+				// inside clipping planes...
+				// now, loop over all lights
+				for (int k = 0; k < nNodes; k++) if (scene[k].type[0] == 'l')	// for each light
+				{
+					// ray origing (fron light to object)
+					double *Ron = scene[k].position;
+
+					// ray direction
+					double Rdn[3];
+					// light position - hit
+					subtract(hit, Ron, Rdn);
+
+					normalize(Rdn);
+
+					// look for the closest ray intersection
+					double objHit[3];
+					int objIndex = index;
+					if (shoot(Ron, Rdn, objHit, &objIndex))
+					{
+						// the object is the closets to the light direction
+						if (objIndex == index)
+						{
+							double resultColor[3] = {0.0, 0.0, 0.0};
+							double N[3], L[3], V[3];
+							// acum light
+							if (scene[index].type[0] == 's')	// sphere
+								//N = Ron - scene[index].position 
+								subtract(hit, scene[index].position, N);
+							else if (scene[index].type[0] == 'p')	// plane
+								memcpy(N, scene[index].normal, sizeof(double) * 3);
+							normalize(N);
+
+							// L = light position - hit
+							subtract(scene[k].position, hit, L);
+							normalize(L);
+
+							// computing reflext ray
+							double R[3];
+							reflect(L, N, R);
+
+							// view vector = (0,0,0) - hit 
+							V[0] = -hit[0];
+							V[1] = -hit[1];
+							V[2] = -hit[2];
+							normalize(V);
+
+							// compute light model with L, N, R, Diffuse and Specular
+							Phong(L, N, R, V, hit, &scene[index], &scene[k], resultColor);
+							colorIJ[0] += resultColor[0];
+							colorIJ[1] += resultColor[1];
+							colorIJ[2] += resultColor[2];
+						}
+					}
+				}
+
+				// need to be  sure that every color component is betwqeen 0 and 1 before conversion
+				// pixel colored by object hit 
+				int k = (height - 1 - i) * width + j;
+
+				clamp(colorIJ, 0.0, 1.0);
+				imageR[k] = (unsigned char)(colorIJ[0] * 255.0);
+				imageG[k] = (unsigned char)(colorIJ[1] * 255.0);
+				imageB[k] = (unsigned char)(colorIJ[2] * 255.0);
+			}
+    } 
+  }  
 
 
-// save ppm file
-writePPM3(imageR, imageG, imageB, height, width, filename);
+  // save ppm file
+  writePPM3(imageR, imageG, imageB, height, width, filename);
 
-// free image
-free(imageR);
-free(imageG);
-free(imageB);
+  // free image
+  free(imageR);
+  free(imageG);
+  free(imageB);
 }
 
 void free_scene()
 {
 	// first erase dynamic mem
-	for (int i = 0; i < nNodes; i++)
-	{
-		if (scene[i].color != NULL)
-			free(scene[i].color);
-		if (scene[i].position != NULL)
-			free(scene[i].position);
-		if (scene[i].normal != NULL)
-			free(scene[i].normal);
-		if (scene[i].type != NULL)
-			free(scene[i].type);
+  for (int i = 0; i < nNodes; i++)
+  {
+    if (scene[i].color != NULL)
+      free(scene[i].color);
+    if (scene[i].position != NULL)
+      free(scene[i].position);
+    if (scene[i].normal != NULL)
+      free(scene[i].normal);
+    if (scene[i].type != NULL)
+      free(scene[i].type);
 		if (scene[i].diffuse != NULL)
 			free(scene[i].diffuse);
 		if (scene[i].specular != NULL)
@@ -601,10 +473,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// clear all possible nodes of the array
-	memset(scene, 0, sizeof(node) * MAX_NODES);
+  // clear all possible nodes of the array
+  memset(scene, 0, sizeof(node) * MAX_NODES);
 	read_scene(argv[3], &nNodes, scene);
 	ray_casting(argv[4]);
-	free_scene();
+  free_scene();
 	return 0;
 } 

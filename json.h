@@ -23,9 +23,6 @@ typedef struct node
 	double radial[3];	// a0, a1, a2 ... only for light
 	double *diffuse;
 	double *specular;
-	double reflectivity;
-	double refractivity;
-	double ior;	// The index of refraction of the volume 
 	double ns;	// shininness
 } node;
 

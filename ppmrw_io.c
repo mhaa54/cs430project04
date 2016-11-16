@@ -179,7 +179,7 @@ int readPPM( const char *ipf, unsigned char **imageR, unsigned char **imageG, un
 int writePPM3(const unsigned char *imageR, const unsigned char *imageG, const unsigned char *imageB, int height, int width, const char *opf) 
 {
 	FILE *inFp = NULL;
-	int ch, i, j, index = 0;
+	int i, j, index = 0;
 	
 	/*
 	 * Sample signature to comment inside image
@@ -246,7 +246,7 @@ int writePPM3(const unsigned char *imageR, const unsigned char *imageG, const un
 int writePPM6(const unsigned char *imageR, const unsigned char *imageG, const unsigned char *imageB, int height, int width, const char *opf) 
 {
 	FILE *inFp = NULL;
-	int ch, i, j, index = 0;
+	int i, j, index = 0;
 	
 	/*
 	 * Sample signature to comment inside image

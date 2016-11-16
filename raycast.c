@@ -366,7 +366,7 @@ void ray_trace(double *colorResult, double *initialPos, double *u, int depth, do
 		// shade intersection point
 		lighting(colorAux, hit, index);
 
-		inten = intensity * (1.0 - scene[index].reflectivity - scene[index].refractivity);
+		inten = intensity;// *(1.0 - scene[index].reflectivity - scene[index].refractivity);
 
 		colorResult[0] = colorAux[0] * inten;
 		colorResult[1] = colorAux[1] * inten;
@@ -606,5 +606,6 @@ int main(int argc, char *argv[])
 	read_scene(argv[3], &nNodes, scene);
 	ray_casting(argv[4]);
 	free_scene();
+
 	return 0;
 } 

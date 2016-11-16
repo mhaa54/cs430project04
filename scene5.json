@@ -1,0 +1,134 @@
+[ 
+{
+"type": "camera",
+"width": 2.0,
+"height": 2.0
+},
+{
+"type": "sphere",
+"radius": 1.0,
+"reflectivity": 0.1,
+"refractivity": 0.3,
+"ior": 1.33,
+"diffuse_color": [0.5, 0.1, 0.1],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [1, 1, 2.5]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [-2, -2, 1]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [-1.6, 0, 1.4]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [-1.2, 0, 1.8]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [-0.8, 0, 2.2]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [-0.4, 0, 2.6]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [0, 0, 3]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [0.4, 0, 3.4]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [0.8, 0.0, 3.8]
+},
+{
+"type": "sphere",
+"radius": 0.25,
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"diffuse_color": [0.3, 1.0, 0.3],
+"specular_color": [0.1, 0.1, 0.9],
+"position": [1.2, 0, 4.2]
+},
+{
+"type": "plane",
+"reflectivity": 0.0,
+"refractivity": 0.0,
+"ior": 1.33,
+"normal": [0.7, 0, -0.7],
+"diffuse_color": [1, 0, 1],
+"position": [-9.6, 0, 9.6]
+},
+{
+"type": "light",
+"color": [1, 1, 1],
+"theta": 0,
+"radial-a2": 0.01,
+"radial-a1": 0.01,
+"radial-a0": 0.01, 
+ "position": [0, 0, 0]
+ },
+{
+"type": "light",
+"color": [1, 1, 1],
+"theta": 0,
+"radial-a2": 0.01,
+"radial-a1": 0.01,
+"radial-a0": 0.01, 
+ "position": [1, 1, 2]
+ }, 
+ ] 
